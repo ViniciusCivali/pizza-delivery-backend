@@ -3,7 +3,7 @@ from sqlalchemy import (Boolean, Column, Float, ForeignKey, Integer, String,
 from sqlalchemy.orm import declarative_base
 
 # Creatting db conection
-db = create_engine("sqlite:///../database/banco.db", echo=True, future=True)
+db = create_engine("sqlite:///database/banco.db", echo=True, future=True)
 # Creating base of db
 Base = declarative_base()
 
@@ -50,7 +50,7 @@ class Order(Base):
     price = Column("price", Float)
     # items =
 
-    def __init__(self, price: float, status: str = "PENDING", user: int | None = None):
+    def __init__(self, price: float = 0, status: str = "PENDING", user: int | None = None):
         self.price = price
         self.status = status
         self.user = user
