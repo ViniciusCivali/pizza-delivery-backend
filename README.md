@@ -5,7 +5,7 @@ Implementing the backend of a pizza delivery service is a study of FastApi + Dat
 ```
 poetry init
 
-Dependencies: fastapi uvicorn sqlalchemy passlib[bcrypt] python-jose[cryptography] python-dotenv python-multipart
+Dependencies: fastapi uvicorn sqlalchemy passlib[bcrypt] python-jose[cryptography] python-dotenv python-multipart sqlalchemy_utils alembic 
 
 Dev dependencies: black isort pytest ruff
 
