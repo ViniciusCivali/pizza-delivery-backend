@@ -1,15 +1,12 @@
-from email.policy import HTTP
+from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException
 from dependencies import get_session
 from app import User
-from dependencies import hash_password, verify_password, UserSchema, LoginSchema
+from dependencies import hash_password, verify_password, UserSchema, LoginSchema, create_access_token, create_refresh_token, verify_token
 from sqlalchemy.orm import Session
+from fastapi.security import OAuth2PasswordRequestForm
 
 auth_router = APIRouter(prefix="/auth", tags=["auth"])
-
-
-def create_token(user_id: str):
-    return f"adfasdfasdf{user_id}"
 
 
 @auth_router.get("/")
@@ -47,22 +44,63 @@ async def create_user(user_schema: UserSchema, session: Session = Depends(get_se
 # login -> email and password -> token JWT (Json Web Token) afasgusfifjjvdkjv
 
 
+@staticmethod
+def authenticate_user(session: Session, email: str, password: str) -> bool:
+    user = session.query(User).filter(User.email == email).first()
+    if user:
+        if verify_password(password, user.password):
+            return True
+        else:
+            raise HTTPException(status_code=400, detail="Wrong credentials")
+    else:
+        raise HTTPException(status_code=400, detail="User not found")
+
+
 @auth_router.post("/login")
 async def login(login_schema: LoginSchema, session: Session = Depends(get_session)):
     """
     Login
     """
-    user = session.query(User).filter(User.email == login_schema.email).first()
+    if authenticate_user(session, login_schema.email, login_schema.password):
+        user = session.query(User).filter(
+            User.email == login_schema.email).first()
+        access_token = create_access_token(user_id=user.id)
+        refresh_token = create_refresh_token(
+            user_id=user.id, token_duration=timedelta(days=1))
 
-    if user:
-        if verify_password(login_schema.password, user.password):
-            access_token = create_token(user.id)
-
-            return {
-                "access_token": access_token,
-                "token_type": "Bearer",
-            }
-        else:
-            raise HTTPException(status_code=400, detail="Incorrect password")
+        return {
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "token_type": "Bearer",
+        }
     else:
-        raise HTTPException(status_code=400, detail="User not found")
+        raise HTTPException(
+            status_code=400, detail="email or password missmatch")
+
+
+@auth_router.post("/login-form")
+async def login_form(form_data: OAuth2PasswordRequestForm = Depends(), session: Session = Depends(get_session)):
+    """
+    Login
+    """
+    if authenticate_user(session, form_data.username, form_data.password):
+        user = session.query(User).filter(
+            User.email == form_data.username).first()
+        access_token = create_access_token(user_id=user.id)
+
+        return {
+            "access_token": access_token,
+            "token_type": "Bearer",
+        }
+    else:
+        raise HTTPException(
+            status_code=400, detail="email or password missmatch")
+
+
+@auth_router.post("/refresh")
+async def user_refresh_token(user: User = Depends(verify_token)):
+    access_token = create_access_token(user.id)
+    return {
+        "access_token": access_token,
+        "token_type": "Bearer",
+    }
