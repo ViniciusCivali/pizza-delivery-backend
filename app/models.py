@@ -46,14 +46,14 @@ class Order(Base):
 
     id = Column("id", Integer, primary_key=True, autoincrement=True)
     status = Column("status", String)
-    user = Column("user", ForeignKey("users.id"))
+    user_id = Column("user_id", ForeignKey("users.id"))
     price = Column("price", Float)
     # items =
 
-    def __init__(self, price: float = 0, status: str = "PENDING", user: int | None = None):
+    def __init__(self, price: float = 0, status: str = "PENDING", user_id: int | None = None):
         self.price = price
         self.status = status
-        self.user = user
+        self.user_id = user_id
 
 
 class OrderItem(Base):

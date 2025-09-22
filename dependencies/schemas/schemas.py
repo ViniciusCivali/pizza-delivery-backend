@@ -14,7 +14,7 @@ class UserSchema(BaseModel):
 
 
 class OrderSchema(BaseModel):
-    user: int
+    user_id: int
 
     class Config:
         from_attribute = True

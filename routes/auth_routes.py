@@ -38,7 +38,6 @@ async def create_user(user_schema: UserSchema, session: Session = Depends(get_se
 
         session.add(new_user)
         session.commit()
-        session.refresh(new_user)
         return {"message": f"User {user_schema.name} created successfully"}
 
 # login -> email and password -> token JWT (Json Web Token) afasgusfifjjvdkjv
