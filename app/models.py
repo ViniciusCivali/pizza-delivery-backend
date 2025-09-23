@@ -19,6 +19,7 @@ class User(Base):
     password = Column("password", String)
     active = Column("active", Boolean)
     admin = Column("admin", Boolean, default=False)
+    orders = relationship("Order", cascade="all, delete")
 
     def __init__(
         self,
@@ -42,6 +43,7 @@ class Order(Base):
     #     ("PENDING", "PENDING"),
     #     ("CANCELED", "CANCELED"),
     #     ("COMPLETED", "COMPLETED"),
+    #     ("FINISHED", "FINISHED"),
     # ]
 
     id = Column("id", Integer, primary_key=True, autoincrement=True)

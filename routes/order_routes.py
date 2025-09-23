@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
-from dependencies import get_session, OrderSchema, ItemSchema, verify_token
+from rsa import verify
+from dependencies import get_session, OrderSchema, ItemSchema, ResponseOrderSchema, verify_token
 from sqlalchemy.orm import Session
 from app import Order, User, OrderItem
+from typinf import List
 
 order_router = APIRouter(
     prefix="/orders", tags=["orders"], dependencies=[Depends(verify_token)])
@@ -62,12 +64,12 @@ async def list_orders(session: Session = Depends(get_session), user: User = Depe
 
 
 @order_router.post("/order/add-item/{order_id}")
-async def add_item_order(order_id: int, item_schema: ItemSchema, session: Session = Depends(get_session), user: User = Depends(verify_token)):
+async def add_order_item(order_id: int, item_schema: ItemSchema, session: Session = Depends(get_session), user: User = Depends(verify_token)):
     order = session.query(Order).filter(
         Order.id == order_id).first()
 
     if not order:
-        raise HTTPException(status_code=400, detail="Orer doesn't eexist")
+        raise HTTPException(status_code=400, detail="Orer doesn't exist")
 
     if order.user_id != user.id and not user.admin:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -88,4 +90,111 @@ async def add_item_order(order_id: int, item_schema: ItemSchema, session: Sessio
         "message": "Item added successfully",
         "item_id": order_item.id,
         "order_price": order.price,
+    }
+
+
+@order_router.post("/order/remove-item/{order_item_id}")
+async def remove_order_itm(order_item_id: int, session: Session = Depends(get_session), user: User = Depends(verify_token)):
+    order_item = session.query(OrderItem).filter(
+        OrderItem.id == order_item_id).first()
+
+    if not order_item:
+        raise HTTPException(status_code=400, detail="Orer item doesn't exist")
+
+    order = session.query(Order).filter(Order.id == order_item.order).first()
+
+    if order.user_id != user.id and not user.admin:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    session.delete(order_item)
+    order.calculate_price()
+    session.commit()
+
+    return {
+        "message": "Item removed successfully",
+        "quantity_order_items": len(order.items),
+        "order": order,
+    }
+
+
+# Finish order
+@order_router.post("/order/delete-order/{order_id}")
+async def delete_order(order_id: int, session: Session = Depends(get_session), user: User = Depends(verify_token)):
+    """
+    Delete a order from the user
+    """
+    order = next(
+        (order for order in user.orders if order.id == order_id), None)
+
+    if not order:
+        raise HTTPException(
+            status_code=401, detail="This user don't have this order")
+
+    session.delete(order)
+
+    session.commit()
+
+    return {
+        "message": "Order deleted successfully"
+    }
+
+
+@order_router.post("/order/finish-order/{order_id}")
+async def finish_order(order_id: int, session: Session = Depends(get_session), user: User = Depends(verify_token)):
+    """
+    Finish a order from the user
+    """
+    order = next(
+        (order for order in user.orders if order.id == order_id), None)
+
+    if not order:
+        raise HTTPException(
+            status_code=401, detail="This user don't have this order")
+
+    order.status = "FINISHED"
+
+    session.commit()
+
+    return {
+        "message": f"Order {order.id} finished successfully",
+        "order": order
+    }
+
+
+@order_router.get("/order/get-order/{order_id}", response_model=ResponseOrderSchema)
+async def get_user_order(order_id: int, session: Session = Depends(get_session), user: User = Depends(verify_token)):
+    """
+    Get a specific order from the user
+    """
+    order = next(
+        (order for order in user.orders if order.id == order_id), None)
+
+    if not order:
+        raise HTTPException(
+            status_code=401, detail="This user don't have this order")
+
+    return order
+
+
+@order_router.get("/order/get_order_items/{order_id}")
+async def get_order_items(order_id: int, session: Session = Depends(get_session), user: User = Depends(verify_token)):
+    """
+    Get all items of a especific ordem
+    """
+    order = next(
+        (order for order in user.orders if order.id == order_id), None)
+
+    if not order:
+        raise HTTPException(
+            status_code=401, detail="This user don't have this order")
+
+    return {
+        "orders": order.items
+    }
+
+
+@order_router.get("/order/get-user-orders", response_model=List[ResponseOrderSchema])
+async def get_user_orders(session: Session = Depends(get_session), user: User = Depends(verify_token)):
+    return {
+        "orders": user.orders
     }

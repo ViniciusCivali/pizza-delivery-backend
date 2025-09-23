@@ -34,5 +34,14 @@ class ItemSchema(BaseModel):
     size: str
     unit_price: float
 
-    class Congih:
+    class Config:
+        from_attribute = True
+
+
+class ResponseOrderSchema(BaseModel):
+    id: int
+    status: str
+    price: float
+
+    class Config:
         from_attribute = True
