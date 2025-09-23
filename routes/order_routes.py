@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from dependencies import get_session, OrderSchema, verify_token
+from dependencies import get_session, OrderSchema, ItemSchema, verify_token
 from sqlalchemy.orm import Session
-from app import Order, User
+from app import Order, User, OrderItem
 
 order_router = APIRouter(
     prefix="/orders", tags=["orders"], dependencies=[Depends(verify_token)])
@@ -46,4 +46,46 @@ async def cancel_order(order_id: int, session: Session = Depends(get_session), u
     return {
         "message": f"Order {order.id} canceled",
         "order": order
+    }
+
+
+@order_router.get("/list")
+async def list_orders(session: Session = Depends(get_session), user: User = Depends(verify_token)):
+    if not user.admin:
+        HTTPException(status_code=401, detail="Unauthorized")
+
+    orders = session.query(Order).all()
+
+    return {
+        "Orders": orders
+    }
+
+
+@order_router.post("/order/add-item/{order_id}")
+async def add_item_order(order_id: int, item_schema: ItemSchema, session: Session = Depends(get_session), user: User = Depends(verify_token)):
+    order = session.query(Order).filter(
+        Order.id == order_id).first()
+
+    if not order:
+        raise HTTPException(status_code=400, detail="Orer doesn't eexist")
+
+    if order.user_id != user.id and not user.admin:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
+    order_item = OrderItem(
+        quantity=item_schema.quantity,
+        flavor=item_schema.flavor,
+        size=item_schema.size,
+        unit_price=item_schema.unit_price,
+        order=order_id,
+    )
+
+    session.add(order_item)
+    order.calculate_price()
+    session.commit()
+
+    return {
+        "message": "Item added successfully",
+        "item_id": order_item.id,
+        "order_price": order.price,
     }

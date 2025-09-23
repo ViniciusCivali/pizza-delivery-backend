@@ -1,6 +1,6 @@
 from sqlalchemy import (Boolean, Column, Float, ForeignKey, Integer, String,
                         create_engine)
-from sqlalchemy.orm import declarative_base
+from sqlalchemy.orm import declarative_base, relationship
 
 # Creatting db conection
 db = create_engine("sqlite:///database/banco.db", echo=True, future=True)
@@ -48,12 +48,16 @@ class Order(Base):
     status = Column("status", String)
     user_id = Column("user_id", ForeignKey("users.id"))
     price = Column("price", Float)
-    # items =
+    items = relationship("OrderItem", cascade="all, delete")
 
     def __init__(self, price: float = 0, status: str = "PENDING", user_id: int | None = None):
         self.price = price
         self.status = status
         self.user_id = user_id
+
+    def calculate_price(self):
+        self.price = sum(item.unit_price *
+                         item.quantity for item in self.items)
 
 
 class OrderItem(Base):
